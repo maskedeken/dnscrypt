@@ -6,7 +6,7 @@ require (
 	github.com/AdguardTeam/golibs v0.4.2
 	github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da
 	github.com/aead/poly1305 v0.0.0-20180717145839-3fee0db0b635
-	github.com/ameshkov/dnsstamps v1.0.1
+	github.com/ameshkov/dnsstamps v1.0.3
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/miekg/dns v1.1.40
 	github.com/stretchr/testify v1.6.1
