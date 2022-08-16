@@ -20,6 +20,8 @@ type Client struct {
 	// UDPSize is the maximum size of a DNS response (or query) this client can
 	// sent or receive. If not set, we use dns.MinMsgSize by default.
 	UDPSize int
+
+	Dialer func(network, address string) (net.Conn, error)
 }
 
 // ResolverInfo contains DNSCrypt resolver information necessary for decryption/encryption
@@ -89,7 +91,14 @@ func (c *Client) Exchange(m *dns.Msg, resolverInfo *ResolverInfo) (*dns.Msg, err
 		network = "tcp"
 	}
 
-	conn, err := net.Dial(network, resolverInfo.ServerAddress)
+	var conn net.Conn
+	var err error
+	if c.Dialer != nil {
+		conn, err = c.Dialer(network, resolverInfo.ServerAddress)
+	} else {
+		conn, err = net.Dial(network, resolverInfo.ServerAddress)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -227,10 +236,28 @@ func (c *Client) fetchCert(stamp dnsstamps.ServerStamp) (*Cert, error) {
 	query.SetQuestion(providerName, dns.TypeTXT)
 	// use 1252 as a UDPSize for this client to make sure the buffer is not too small
 	client := dns.Client{Net: c.Net, UDPSize: uint16(1252), Timeout: c.Timeout}
-	r, _, err := client.Exchange(query, stamp.ServerAddrStr)
+	var conn *dns.Conn
+	var err error
+	if c.Dialer != nil {
+		var co net.Conn
+		co, err = c.Dialer(client.Net, stamp.ServerAddrStr)
+		if err == nil {
+			conn = &dns.Conn{
+				Conn:         co,
+				UDPSize:      client.UDPSize,
+				TsigSecret:   client.TsigSecret,
+				TsigProvider: client.TsigProvider,
+			}
+		}
+	} else {
+		conn, err = client.Dial(stamp.ServerAddrStr)
+	}
+
 	if err != nil {
 		return nil, err
 	}
+
+	r, _, err := client.ExchangeWithConn(query, conn)
 
 	if r.Rcode != dns.RcodeSuccess {
 		return nil, ErrFailedToFetchCert
