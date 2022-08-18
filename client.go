@@ -258,6 +258,9 @@ func (c *Client) fetchCert(stamp dnsstamps.ServerStamp) (*Cert, error) {
 	}
 
 	r, _, err := client.ExchangeWithConn(query, conn)
+	if err != nil {
+		return nil, err
+	}
 
 	if r.Rcode != dns.RcodeSuccess {
 		return nil, ErrFailedToFetchCert
